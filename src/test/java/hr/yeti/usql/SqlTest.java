@@ -75,7 +75,7 @@ public class SqlTest {
     @Test
     @Order(5)
     public void should_rollback_transaction() throws SQLException {
-        assertThrows(TxException.class, () -> sql.tx(query -> {
+        assertThrows(USqlException.class, () -> sql.tx(query -> {
             query.update("delete from person");
             query.update("insert into person(name) values(?)", "Leni");
             throw new RuntimeException();
@@ -90,8 +90,8 @@ public class SqlTest {
     @Order(6)
     public void should_use_custom_row_mapper() throws SQLException {
         List<Integer> rows = sql.query(query -> query.rows(
-                "select name from person",
-                row -> row.get("NAME").toString().length())
+            "select name from person",
+            row -> row.get("NAME").toString().length())
         );
 
         assertEquals(3, rows.size());

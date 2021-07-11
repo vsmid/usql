@@ -27,19 +27,20 @@ public class Sql {
         this.dataSource = dataSource;
     }
 
-    public Connection connect() throws SQLException {
+    public Connection connect() {
         try {
             if (dataSource != null) {
                 return dataSource.getConnection();
             } else {
                 return DriverManager.getConnection(url, user, password);
             }
-        } catch (SQLException e) {
-            throw e;
+        } catch (SQLException ex) {
+            throw new USqlException(ex);
         }
     }
 
     public class Query {
+
         private final Connection conn;
         private final boolean tx;
 
@@ -51,16 +52,16 @@ public class Sql {
             }
         }
 
-        public <T> List<T> rows(String sql, RowMapper<T> rowMapper, Object... params) throws SQLException {
+        public <T> List<T> rows(String sql, RowMapper<T> rowMapper, Object... params) {
             List<Map<String, Object>> rows = rows(sql, params);
 
             return rows
-                    .stream()
-                    .map(rowMapper::map)
-                    .collect(Collectors.toList());
+                .stream()
+                .map(rowMapper::map)
+                .collect(Collectors.toList());
         }
 
-        public List<Map<String, Object>> rows(String sql, Object... params) throws SQLException {
+        public List<Map<String, Object>> rows(String sql, Object... params) {
             List<Map<String, Object>> result = new ArrayList<>();
 
             Statement statement = null;
@@ -86,6 +87,8 @@ public class Sql {
                     }
                     result.add(map);
                 }
+            } catch (SQLException ex) {
+                throw new USqlException(ex);
             } finally {
                 try {
                     if (resultSet != null) {
@@ -97,13 +100,14 @@ public class Sql {
                     }
                 } catch (SQLException ex) {
                     logger.log(ERROR, ex);
+
                 }
             }
 
             return result;
         }
 
-        public long update(String sql, Object... params) throws SQLException {
+        public long update(String sql, Object... params) {
             long updated;
             PreparedStatement preparedStatement = null;
             try {
@@ -113,6 +117,8 @@ public class Sql {
                     preparedStatement.setObject(paramIndex++, param);
                 }
                 updated = preparedStatement.executeUpdate();
+            } catch (SQLException ex) {
+                throw new USqlException(ex);
             } finally {
                 try {
                     if (preparedStatement != null) {
@@ -134,8 +140,12 @@ public class Sql {
         }
     }
 
-    public <T> T query(QueryDef<T> queryDef) throws SQLException {
-        return queryDef.execute(new Query(false));
+    public <T> T query(QueryDef<T> queryDef) {
+        try {
+            return queryDef.execute(new Query(false));
+        } catch (SQLException ex) {
+            throw new USqlException(ex);
+        }
     }
 
     public <T> T tx(TxDef<T> tTxDef) {
@@ -157,7 +167,7 @@ public class Sql {
                     }
                 }
             }
-            throw new TxException(ex1);
+            throw new USqlException(ex1);
         } finally {
             try {
                 if (query != null) {
@@ -170,4 +180,3 @@ public class Sql {
         }
     }
 }
-
